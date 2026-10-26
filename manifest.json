@@ -1,6 +1,6 @@
 {
-  "name": "Agenda Académica FIME",
-  "short_name": "Agenda FIME",
+  "name": "Agenda FIME",
+  "short_name": "Agenda",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
@@ -8,16 +8,10 @@
   "theme_color": "#121212",
   "icons": [
     {
-      "src": "./icono.png",
+      "src": "./icono-v2.png",
       "sizes": "192x192 512x512",
       "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "./icono.png",
-      "sizes": "192x192 512x512",
-      "type": "image/png",
-      "purpose": "maskable"
+      "purpose": "any maskable"
     }
   ]
 }
