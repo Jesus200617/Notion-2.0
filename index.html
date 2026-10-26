@@ -1,0 +1,2165 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Agenda Académica FIME - UANL</title>
+    <!-- Supabase JS Client v2 -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --bg-body: #121212;
+            --bg-sidebar: #181818;
+            --bg-surface: #1e1e1e;
+            --bg-surface-elevated: #262626;
+            --bg-hover: #2f2f2f;
+            --border-subtle: #2d2d2d;
+            --border-strong: #3d3d3d;
+            --text-primary: #f3f4f6;
+            --text-secondary: #9ca3af;
+            --text-muted: #6b7280;
+            --brand-primary: #3b82f6;
+            --brand-hover: #2563eb;
+            --brand-pink: #ec4899;
+            --fime-green: #059669;
+            --status-done: #10b981;
+            --status-prog: #f59e0b;
+            --status-todo: #ef4444;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-primary);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 5px; height: 5px; }
+        ::-webkit-scrollbar-track { background: var(--bg-body); }
+        ::-webkit-scrollbar-thumb { background: #374151; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #4b5563; }
+
+        /* Barra Lateral (Laptop / Desktop) */
+        aside {
+            width: 260px;
+            background-color: var(--bg-sidebar);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            padding: 20px 14px;
+            flex-shrink: 0;
+            z-index: 100;
+        }
+
+        .brand-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 4px 8px 18px 8px;
+            border-bottom: 1px solid var(--border-subtle);
+            margin-bottom: 16px;
+        }
+
+        .brand-icon {
+            font-size: 20px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            width: 36px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
+            flex-shrink: 0;
+        }
+
+        .brand-text h1 {
+            font-size: 14.5px;
+            font-weight: 700;
+            letter-spacing: -0.3px;
+            line-height: 1.2;
+        }
+
+        .brand-text p {
+            font-size: 11px;
+            color: var(--text-secondary);
+        }
+
+        .sem-selector-wrap {
+            margin-bottom: 18px;
+            padding: 0 4px;
+        }
+
+        .sem-label {
+            font-size: 10.5px;
+            text-transform: uppercase;
+            color: var(--text-muted);
+            font-weight: 700;
+            margin-bottom: 6px;
+            display: block;
+            letter-spacing: 0.5px;
+        }
+
+        .select-dark {
+            width: 100%;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-strong);
+            color: var(--text-primary);
+            padding: 8px 10px;
+            border-radius: 7px;
+            font-size: 13px;
+            cursor: pointer;
+            outline: none;
+            transition: border-color 0.15s ease;
+        }
+        .select-dark:focus { border-color: var(--brand-primary); }
+
+        .nav-links {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            flex-grow: 1;
+        }
+
+        .nav-btn {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 7px;
+            color: var(--text-secondary);
+            font-size: 13.5px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            border: none;
+            background: transparent;
+            width: 100%;
+            text-align: left;
+        }
+
+        .nav-btn:hover {
+            background: var(--bg-surface-elevated);
+            color: var(--text-primary);
+        }
+
+        .nav-btn.active {
+            background: #222b38;
+            color: #60a5fa;
+            font-weight: 600;
+            box-shadow: inset 3px 0 0 #3b82f6;
+        }
+
+        .siase-btn {
+            background: linear-gradient(135deg, #064e3b 0%, #065f46 100%);
+            color: #a7f3d0 !important;
+            font-weight: 600;
+            border: 1px solid #047857;
+            margin-top: 10px;
+            justify-content: center;
+            text-decoration: none;
+        }
+
+        .notif-btn {
+            margin-top: 6px;
+            font-size: 12px;
+            border: 1px solid var(--border-subtle);
+            justify-content: center;
+        }
+
+        /* Barra Móvil Inferior (Bottom Bar) */
+        .bottom-nav {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: calc(56px + var(--safe-bottom));
+            background: rgba(22, 22, 22, 0.95);
+            backdrop-filter: blur(14px);
+            border-top: 1px solid var(--border-subtle);
+            z-index: 999;
+            padding-bottom: var(--safe-bottom);
+            justify-content: space-around;
+            align-items: center;
+        }
+
+        .bottom-nav-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 10.5px;
+            font-weight: 500;
+            background: none;
+            border: none;
+            cursor: pointer;
+            width: 20%;
+            height: 100%;
+            gap: 3px;
+        }
+
+        .bottom-nav-item .icon { font-size: 18px; }
+        .bottom-nav-item.active { color: #60a5fa; font-weight: 700; }
+
+        /* Área Principal */
+        main {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        header {
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border-subtle);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background-color: rgba(18, 18, 18, 0.94);
+            backdrop-filter: blur(12px);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+
+        .header-title {
+            font-size: 18px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            letter-spacing: -0.4px;
+        }
+
+        .btn-primary {
+            background: var(--brand-primary);
+            color: #fff;
+            border: none;
+            padding: 8px 14px;
+            border-radius: 7px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+            box-shadow: var(--shadow-sm);
+            white-space: nowrap;
+        }
+        .btn-primary:hover { background: var(--brand-hover); }
+
+        .btn-danger {
+            background: #b91c1c;
+            color: #fff;
+            border: none;
+            padding: 7px 12px;
+            border-radius: 6px;
+            font-size: 12.5px;
+            cursor: pointer;
+        }
+
+        .view-container {
+            padding: 20px 24px;
+            display: none;
+        }
+        .view-container.active { display: block; }
+
+        .sub-nav {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid var(--border-subtle);
+            padding-bottom: 10px;
+        }
+        .sub-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        .sub-btn.active {
+            background: var(--bg-surface-elevated);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* CALENDARIO */
+        .cal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 14px;
+        }
+        .cal-month-title {
+            font-size: 16.5px;
+            font-weight: 700;
+        }
+        .cal-nav-btn {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-strong);
+            color: var(--text-primary);
+            padding: 5px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 12.5px;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            border-top: 1px solid var(--border-subtle);
+            border-left: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .cal-day-name {
+            padding: 10px 4px;
+            text-align: center;
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            border-right: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border-subtle);
+            background: #171717;
+            text-transform: uppercase;
+        }
+
+        .cal-cell {
+            min-height: 110px;
+            padding: 6px 4px;
+            border-right: 1px solid var(--border-subtle);
+            border-bottom: 1px solid var(--border-subtle);
+            background-color: var(--bg-surface);
+            position: relative;
+        }
+        .cal-cell.other-month {
+            opacity: 0.35;
+            background-color: #141414;
+        }
+
+        .cal-cell.drag-over {
+            background-color: #1e293b !important;
+            outline: 2px dashed #3b82f6;
+            outline-offset: -3px;
+        }
+
+        .cal-cell-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+
+        .cal-day-num {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .cal-day-num.today {
+            background: var(--brand-pink);
+            color: #fff;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 0 8px rgba(236, 72, 153, 0.4);
+        }
+
+        .cal-add-btn {
+            opacity: 0;
+            background: #2d2d2d;
+            border: 1px solid var(--border-strong);
+            color: #d1d5db;
+            border-radius: 4px;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            cursor: pointer;
+        }
+        .cal-cell:hover .cal-add-btn { opacity: 1; }
+
+        .cal-item {
+            background: #252525;
+            border: 1px solid #383838;
+            border-radius: 5px;
+            padding: 5px 6px;
+            font-size: 11px;
+            margin-bottom: 4px;
+            cursor: grab;
+            box-shadow: var(--shadow-sm);
+            user-select: none;
+        }
+        .cal-item:active { cursor: grabbing; }
+
+        .cal-item-project {
+            border-left: 3px solid #38bdf8 !important;
+            background: #1b2631;
+        }
+
+        .cal-badge {
+            display: inline-block;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 9.5px;
+            font-weight: 600;
+            margin-top: 3px;
+            max-width: 100%;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        /* TABLA */
+        .table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+            text-align: left;
+        }
+        th, td {
+            padding: 10px 14px;
+            border-bottom: 1px solid var(--border-subtle);
+            border-right: 1px solid var(--border-subtle);
+        }
+        th {
+            background: #191919;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 11.5px;
+            text-transform: uppercase;
+        }
+        tr:hover td { background-color: var(--bg-hover); }
+
+        .pill-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            cursor: pointer;
+        }
+        .pill-status.done { background: rgba(16, 185, 129, 0.2); color: #6ee7b7; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .pill-status.prog { background: rgba(245, 158, 11, 0.2); color: #fde68a; border: 1px solid rgba(245, 158, 11, 0.3); }
+        .pill-status.todo { background: rgba(239, 68, 68, 0.2); color: #fca5a5; border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* PONDERACIONES */
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 16px;
+        }
+        .calc-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 16px;
+        }
+        .calc-bar {
+            height: 8px;
+            background: #2b2b2b;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        .calc-progress {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #60a5fa);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        /* HORARIO FIME */
+        .horario-table-wrap {
+            overflow-x: auto;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            -webkit-overflow-scrolling: touch;
+        }
+        .horario-table {
+            width: 100%;
+            min-width: 650px;
+            border-collapse: collapse;
+            text-align: center;
+        }
+        .horario-table th {
+            background: #171717;
+            padding: 10px 6px;
+            font-size: 11.5px;
+            border-bottom: 1px solid var(--border-subtle);
+            border-right: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+        .horario-table td {
+            border-bottom: 1px solid var(--border-subtle);
+            border-right: 1px solid var(--border-subtle);
+            padding: 4px;
+            height: 48px;
+            background: var(--bg-surface);
+        }
+        .horario-time-col {
+            width: 90px !important;
+            background: #151515 !important;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #93c5fd;
+        }
+        .fime-pill {
+            display: inline-block;
+            font-size: 8.5px;
+            background: #1e3a8a;
+            color: #bfdbfe;
+            padding: 2px 4px;
+            border-radius: 3px;
+            margin-right: 3px;
+        }
+        .clase-card {
+            padding: 5px;
+            border-radius: 5px;
+            font-size: 10.5px;
+            text-align: left;
+            position: relative;
+        }
+        .clase-card .del-clase-btn {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            background: rgba(0,0,0,0.5);
+            border: none;
+            color: #fff;
+            border-radius: 50%;
+            width: 15px;
+            height: 15px;
+            font-size: 9px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* PROYECTOS */
+        .proj-container {
+            display: grid;
+            grid-template-columns: 290px 1fr;
+            gap: 18px;
+        }
+        .proj-list {
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            background: var(--bg-surface);
+            padding: 14px;
+        }
+        .proj-card {
+            padding: 12px;
+            background: #242424;
+            border-radius: 6px;
+            margin-bottom: 8px;
+            cursor: pointer;
+            border: 1px solid transparent;
+        }
+        .proj-card.selected {
+            border-color: var(--brand-primary);
+            background: #1e293b;
+        }
+        .proj-detail {
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            background: var(--bg-surface);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+        }
+        .proj-textarea {
+            width: 100%;
+            height: 110px;
+            background: #141414;
+            border: 1px solid var(--border-strong);
+            color: #fff;
+            padding: 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            resize: vertical;
+        }
+
+        .month-chip {
+            background: #262626;
+            border: 1px solid var(--border-strong);
+            color: #d1d5db;
+            font-size: 11px;
+            padding: 3px 9px;
+            border-radius: 12px;
+            cursor: pointer;
+        }
+        .month-chip.active {
+            background: #1e3a8a;
+            border-color: #3b82f6;
+            color: #bfdbfe;
+            font-weight: 600;
+        }
+
+        /* GESTIÓN MATERIAS */
+        .materias-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+            gap: 14px;
+            margin-top: 12px;
+        }
+        .materia-item-card {
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 7px;
+            padding: 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* MODALES */
+        .modal {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal.active { display: flex; }
+
+        .notion-modal-box {
+            background: #202020;
+            border: 1px solid #374151;
+            border-radius: 10px;
+            padding: 24px;
+            width: 92%;
+            max-width: 580px;
+            max-height: 88vh;
+            overflow-y: auto;
+        }
+
+        .notion-title-input {
+            width: 100%;
+            background: transparent;
+            border: none;
+            color: #fff;
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 20px;
+            outline: none;
+        }
+
+        .notion-props-table {
+            display: grid;
+            grid-template-columns: 130px 1fr;
+            row-gap: 12px;
+            column-gap: 14px;
+            align-items: center;
+            margin-bottom: 20px;
+            font-size: 13px;
+        }
+
+        .notion-prop-label {
+            color: var(--text-secondary);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .input-dark {
+            width: 100%;
+            background: #161616;
+            border: 1px solid var(--border-strong);
+            color: #fff;
+            padding: 8px 10px;
+            border-radius: 6px;
+            font-size: 13px;
+            outline: none;
+        }
+        .input-dark:focus { border-color: var(--brand-primary); }
+
+        /* ========================================================
+           ADAPTACIÓN RESPONSIVA (CELULAR Y TABLET)
+           ======================================================== */
+        @media (max-width: 1024px) {
+            /* Tablets (Galaxy Tab, iPad, etc.) */
+            aside { width: 220px; padding: 16px 10px; }
+            .cal-cell { min-height: 95px; }
+            .proj-container { grid-template-columns: 240px 1fr; }
+        }
+
+        @media (max-width: 768px) {
+            /* Celulares / Móviles */
+            body { flex-direction: column; }
+            aside { display: none; } /* Se oculta sidebar para dar paso a Bottom Bar */
+            .bottom-nav { display: flex; } /* Activación barra de navegación inferior móvil */
+            
+            main {
+                padding-bottom: calc(64px + var(--safe-bottom));
+                height: 100vh;
+            }
+
+            header {
+                padding: 12px 16px;
+                flex-wrap: wrap;
+                gap: 8px;
+            }
+
+            .header-title { font-size: 16px; }
+            .btn-primary { padding: 6px 12px; font-size: 12px; }
+
+            .mobile-sem-wrap {
+                display: block !important;
+                width: 100%;
+                margin-top: 4px;
+            }
+
+            .view-container { padding: 14px 12px; }
+
+            /* Calendario móvil */
+            .cal-grid {
+                border-radius: 6px;
+            }
+            .cal-day-name { font-size: 9.5px; padding: 6px 2px; }
+            .cal-cell {
+                min-height: 72px;
+                padding: 4px 2px;
+            }
+            .cal-day-num { font-size: 10.5px; }
+            .cal-day-num.today { width: 19px; height: 19px; font-size: 10px; }
+            .cal-add-btn { display: none; } /* En móvil se toca la celda directamente */
+            .cal-badge { display: none; } /* Ocultar badges de texto largo en celdas móviles para no saturar */
+            .cal-item {
+                padding: 3px 4px;
+                margin-bottom: 2px;
+                font-size: 9.5px;
+                line-height: 1.2;
+            }
+
+            /* Proyectos apilados */
+            .proj-container {
+                grid-template-columns: 1fr;
+            }
+            .proj-detail { padding: 16px; }
+
+            /* Malla de horario táctil con scroll */
+            .horario-table-wrap {
+                margin: 0 -12px;
+                border-radius: 0;
+            }
+
+            /* Modales en pantalla completa móvil */
+            .notion-modal-box {
+                width: 96%;
+                padding: 18px 14px;
+            }
+            .notion-props-table {
+                grid-template-columns: 1fr;
+                row-gap: 8px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BARRA LATERAL (DESKTOP / LAPTOP) -->
+    <aside>
+        <div class="brand-container">
+            <div class="brand-icon">⚡</div>
+            <div class="brand-text">
+                <h1>Agenda Académica</h1>
+                <p>Facultad de Ing. Mecánica y Eléctrica</p>
+            </div>
+        </div>
+
+        <div class="sem-selector-wrap">
+            <label class="sem-label">Semestre Activo</label>
+            <select id="semestreSelectDesktop" class="select-dark" onchange="cambiarSemestre(this.value)"></select>
+        </div>
+
+        <ul class="nav-links">
+            <li><button class="nav-btn active" onclick="switchTab('tab-cal')">📅 Calendario & Tareas</button></li>
+            <li><button class="nav-btn" onclick="switchTab('tab-horario')">🕒 Horario FIME</button></li>
+            <li><button class="nav-btn" onclick="switchTab('tab-calc')">📊 Ponderaciones (Puntos)</button></li>
+            <li><button class="nav-btn" onclick="switchTab('tab-proyectos')">🚀 Proyectos (PIAs)</button></li>
+            <li><button class="nav-btn" onclick="switchTab('tab-config')">📚 Semestres y Materias</button></li>
+            <li>
+                <a href="https://deimos.dgi.uanl.mx/" target="_blank" class="nav-btn siase-btn">
+                    🏛️ Acceso a SIASE
+                </a>
+            </li>
+            <li>
+                <button class="nav-btn notif-btn" onclick="solicitarNotificaciones()">🔔 Probar Alertas</button>
+            </li>
+        </ul>
+    </aside>
+
+    <!-- BARRA DE NAVEGACIÓN INFERIOR (CELULAR / TABLET PORTRAIT) -->
+    <nav class="bottom-nav">
+        <button class="bottom-nav-item active" onclick="switchTab('tab-cal')">
+            <span class="icon">📅</span>
+            <span>Agenda</span>
+        </button>
+        <button class="bottom-nav-item" onclick="switchTab('tab-horario')">
+            <span class="icon">🕒</span>
+            <span>Horario</span>
+        </button>
+        <button class="bottom-nav-item" onclick="switchTab('tab-calc')">
+            <span class="icon">📊</span>
+            <span>Puntos</span>
+        </button>
+        <button class="bottom-nav-item" onclick="switchTab('tab-proyectos')">
+            <span class="icon">🚀</span>
+            <span>PIAs</span>
+        </button>
+        <button class="bottom-nav-item" onclick="switchTab('tab-config')">
+            <span class="icon">📚</span>
+            <span>Materias</span>
+        </button>
+    </nav>
+
+    <!-- CONTENEDOR PRINCIPAL -->
+    <main>
+        <header>
+            <div class="header-title" id="pageTitle">📅 Calendario de Actividades</div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+                <button class="btn-primary" onclick="abrirModalTarea()">+ Nueva Actividad</button>
+                <button class="cal-nav-btn notif-mobile-btn" style="display: inline-flex; align-items: center;" onclick="solicitarNotificaciones()" title="Activar Alertas">🔔</button>
+            </div>
+
+            <!-- Selector visible únicamente en móviles -->
+            <div class="mobile-sem-wrap" style="display: none;">
+                <select id="semestreSelectMobile" class="select-dark" onchange="cambiarSemestre(this.value)"></select>
+            </div>
+        </header>
+
+        <!-- VISTA 1: CALENDARIO Y TAREAS -->
+        <section id="tab-cal" class="view-container active">
+            <div class="sub-nav">
+                <button class="sub-btn active" id="subBtnCal" onclick="toggleSubView('cal')">Vista Calendario</button>
+                <button class="sub-btn" id="subBtnTable" onclick="toggleSubView('table')">Vista Tabla Detallada</button>
+            </div>
+
+            <!-- Calendario -->
+            <div id="subViewCal">
+                <div class="cal-header">
+                    <div class="cal-month-title" id="calMonthYear"></div>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="cal-nav-btn" onclick="cambiarMes(-1)">‹</button>
+                        <button class="cal-nav-btn" onclick="irHoy()">Hoy</button>
+                        <button class="cal-nav-btn" onclick="cambiarMes(1)">›</button>
+                    </div>
+                </div>
+                <div class="cal-grid" id="calendarioGrid"></div>
+            </div>
+
+            <!-- Tabla Notion -->
+            <div id="subViewTable" style="display: none;">
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th style="width: 40px;">✔</th>
+                                <th>Tarea / Actividad</th>
+                                <th>Materia</th>
+                                <th>Status</th>
+                                <th>Fecha Recibida</th>
+                                <th>Fecha Entrega</th>
+                                <th>Tipo</th>
+                                <th>Puntos</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tablaActividadesBody"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISTA 2: HORARIO FIME -->
+        <section id="tab-horario" class="view-container">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; flex-wrap: wrap; gap: 8px;">
+                <div>
+                    <h3 style="font-size: 16px; font-weight: 700;">Horario FIME (Malla Oficial)</h3>
+                    <p style="font-size: 11.5px; color: var(--text-secondary);">Módulos M1-M6, V1-V6 y N1-N6.</p>
+                </div>
+                <button class="btn-primary" onclick="abrirModalHorario()">+ Asignar Clase</button>
+            </div>
+            
+            <div class="horario-table-wrap">
+                <table class="horario-table">
+                    <thead>
+                        <tr>
+                            <th class="horario-time-col">Hora FIME</th>
+                            <th>Lunes</th>
+                            <th>Martes</th>
+                            <th>Miércoles</th>
+                            <th>Jueves</th>
+                            <th>Viernes</th>
+                            <th>Sábado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="horarioFimeBody"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- VISTA 3: CALCULADORA PONDERACIONES -->
+        <section id="tab-calc" class="view-container">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 14px;">Simulador de Calificación y Avance hacia 70</h3>
+            <div class="cards-grid" id="calcGrid"></div>
+        </section>
+
+        <!-- VISTA 4: PROYECTOS / PIAs -->
+        <section id="tab-proyectos" class="view-container">
+            <div class="proj-container">
+                <div class="proj-list">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                        <h4 style="font-weight: 700;">Proyectos (PIAs)</h4>
+                        <button class="cal-nav-btn" onclick="abrirModalProyecto()">+ Nuevo</button>
+                    </div>
+                    <div id="proyectosCards"></div>
+                </div>
+                <div class="proj-detail" id="projDetailArea">
+                    <p style="color: var(--text-muted);">Selecciona un proyecto de la lista.</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- VISTA 5: GESTIÓN SEMESTRES Y MATERIAS -->
+        <section id="tab-config" class="view-container">
+            <h3 style="font-size: 16px; font-weight: 700; margin-bottom: 14px;">Materias del Semestre Seleccionado</h3>
+            <div class="materias-grid" id="materiasListContainer"></div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 24px;">
+                <div class="calc-card">
+                    <h4 style="font-weight: 700; margin-bottom: 8px;">Crear Nuevo Semestre</h4>
+                    <input type="text" id="nuevoSemestreNombre" class="input-dark" placeholder="Ej: 6to Semestre">
+                    <button class="btn-primary" style="margin-top: 10px;" onclick="crearSemestre()">Guardar Semestre</button>
+                </div>
+                <div class="calc-card">
+                    <h4 style="font-weight: 700; margin-bottom: 8px;">Agregar Materia</h4>
+                    <input type="text" id="nuevaMateriaNombre" class="input-dark" placeholder="Nombre de la materia">
+                    <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
+                        <label style="font-size: 12px; color: var(--text-secondary);">Color:</label>
+                        <input type="color" id="nuevaMateriaColor" value="#3b82f6" style="background: none; border: none; cursor: pointer; width: 32px; height: 32px;">
+                    </div>
+                    <button class="btn-primary" style="margin-top: 10px;" onclick="crearMateria()">Guardar Materia</button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- MODAL NOTION: VER / EDITAR / ELIMINAR TAREA -->
+    <div class="modal" id="modalNotionTarea">
+        <div class="notion-modal-box">
+            <input type="hidden" id="notionEditId">
+            <input type="text" id="notionEditTitulo" class="notion-title-input" placeholder="Nombre de la tarea...">
+
+            <div class="notion-props-table">
+                <div class="notion-prop-label"><span>⚙️</span> Status</div>
+                <div>
+                    <select id="notionEditEstado" class="select-dark">
+                        <option value="no hecha">🔴 no hecha</option>
+                        <option value="en proceso">🟡 en proceso</option>
+                        <option value="Terminada">🟢 Terminada</option>
+                    </select>
+                </div>
+
+                <div class="notion-prop-label"><span>📖</span> Asignatura</div>
+                <div><select id="notionEditMateria" class="select-dark"></select></div>
+
+                <div class="notion-prop-label"><span>☑</span> Entregada</div>
+                <div><input type="checkbox" id="notionEditEntregada" style="width: 20px; height: 20px; cursor: pointer;"></div>
+
+                <div class="notion-prop-label"><span>📅</span> Fecha de entrega</div>
+                <div><input type="date" id="notionEditFechaEntrega" class="input-dark"></div>
+
+                <div class="notion-prop-label"><span>🗓️</span> Fecha recibida</div>
+                <div><input type="date" id="notionEditFechaRecibida" class="input-dark"></div>
+
+                <div class="notion-prop-label"><span>🎯</span> Semestre</div>
+                <div><span id="notionEditSemestre" style="font-size: 13px; background: #262626; padding: 4px 10px; border-radius: 4px;"></span></div>
+
+                <div class="notion-prop-label"><span>🏷️</span> Tipo</div>
+                <div>
+                    <select id="notionEditTipo" class="select-dark">
+                        <option value="Tarea">Tarea</option>
+                        <option value="Proyecto">Proyecto</option>
+                        <option value="Estudiar/repa...">Estudiar/repaso</option>
+                        <option value="Examen">Examen</option>
+                    </select>
+                </div>
+
+                <div class="notion-prop-label"><span>📊</span> Puntos (%)</div>
+                <div><input type="number" id="notionEditPuntos" class="input-dark" style="width: 110px;"></div>
+            </div>
+
+            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+                <button class="btn-danger" onclick="eliminarTareaDesdeModal()">Eliminar</button>
+                <div style="display: flex; gap: 8px;">
+                    <button class="cal-nav-btn" onclick="cerrarModal('modalNotionTarea')">Cerrar</button>
+                    <button class="btn-primary" onclick="guardarEdicionTareaNotion()">Guardar</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CREAR TAREA -->
+    <div class="modal" id="modalTarea">
+        <div class="notion-modal-box">
+            <h3 style="margin-bottom: 14px; font-weight: 700;">Nueva Actividad</h3>
+            <label style="font-size: 12px; color: var(--text-secondary);">Título:</label>
+            <input type="text" id="tareaTitulo" class="input-dark" placeholder="Ej: Práctica 12 o Reporte POO">
+            
+            <label style="font-size: 12px; color: var(--text-secondary); margin-top: 8px; display: block;">Materia:</label>
+            <select id="tareaMateria" class="select-dark" style="margin-bottom: 12px;"></select>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label style="font-size: 12px; color: var(--text-secondary);">Fecha de Entrega:</label>
+                    <input type="date" id="tareaFecha" class="input-dark">
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: var(--text-secondary);">Fecha Recibida:</label>
+                    <input type="date" id="tareaFechaRecibida" class="input-dark">
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 8px;">
+                <div>
+                    <label style="font-size: 12px; color: var(--text-secondary);">Tipo:</label>
+                    <select id="tareaTipo" class="select-dark">
+                        <option value="Tarea">Tarea</option>
+                        <option value="Proyecto">Proyecto</option>
+                        <option value="Estudiar/repa...">Estudiar/repaso</option>
+                        <option value="Examen">Examen</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: var(--text-secondary);">Puntos (%):</label>
+                    <input type="number" id="tareaPuntos" class="input-dark" value="5">
+                </div>
+            </div>
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                <button class="cal-nav-btn" onclick="cerrarModal('modalTarea')">Cancelar</button>
+                <button class="btn-primary" onclick="guardarTarea()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL NUEVO PROYECTO -->
+    <div class="modal" id="modalProyecto">
+        <div class="notion-modal-box">
+            <h3 style="margin-bottom: 14px; font-weight: 700;">Nuevo Proyecto (PIA)</h3>
+            <label style="font-size: 12px; color: var(--text-secondary);">Título del Proyecto:</label>
+            <input type="text" id="projTitulo" class="input-dark" placeholder="Ej: PIA Laboratorio POO">
+            
+            <label style="font-size: 12px; color: var(--text-secondary); margin-top: 8px; display: block;">Materia:</label>
+            <select id="projMateria" class="select-dark" style="margin-bottom: 12px;"></select>
+
+            <label style="font-size: 12px; color: var(--text-secondary);">Fecha límite de entrega:</label>
+            <input type="date" id="projFecha" class="input-dark">
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                <button class="cal-nav-btn" onclick="cerrarModal('modalProyecto')">Cancelar</button>
+                <button class="btn-primary" onclick="guardarProyecto()">Guardar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL ASIGNAR CLASE FIME -->
+    <div class="modal" id="modalHorario">
+        <div class="notion-modal-box">
+            <h3 style="margin-bottom: 14px; font-weight: 700;">Asignar Clase a Horario FIME</h3>
+            <label style="font-size: 12px; color: var(--text-secondary);">Materia:</label>
+            <select id="horarioMateriaSelect" class="select-dark" style="margin-bottom: 12px;"></select>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+                <div>
+                    <label style="font-size: 12px; color: var(--text-secondary);">Día:</label>
+                    <select id="horarioDiaSelect" class="select-dark">
+                        <option value="Lunes">Lunes</option>
+                        <option value="Martes">Martes</option>
+                        <option value="Miércoles">Miércoles</option>
+                        <option value="Jueves">Jueves</option>
+                        <option value="Viernes">Viernes</option>
+                        <option value="Sábado">Sábado</option>
+                    </select>
+                </div>
+                <div>
+                    <label style="font-size: 12px; color: var(--text-secondary);">Hora FIME:</label>
+                    <select id="horarioHoraSelect" class="select-dark"></select>
+                </div>
+            </div>
+
+            <label style="font-size: 12px; color: var(--text-secondary); margin-top: 12px; display: block;">Aula o Laboratorio:</label>
+            <input type="text" id="horarioAulaInput" class="input-dark" placeholder="Ej: Salón 4-201 o Lab Cisco">
+
+            <div style="display: flex; justify-content: flex-end; gap: 10px; margin-top: 18px;">
+                <button class="cal-nav-btn" onclick="cerrarModal('modalHorario')">Cancelar</button>
+                <button class="btn-primary" onclick="guardarHorarioClase()">Asignar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // CLIENTE SUPABASE CONECTADO
+        const SUPABASE_URL = 'https://nizjmvkcnaspiddrqspi.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pemptdmtjbmFzcGlkZHJxc3BpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5Nzg1MzEsImV4cCI6MjEwODU1NDUzMX0.5NMrFkeQzF99Db0M1zcO4OMC5MyLI4do75R-WcIv87Y';
+        const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        // CATÁLOGO OFICIAL DE HORAS FIME UANL
+        const HORAS_FIME = [
+            { fime: 'M1', label: 'M1 (07:00 - 07:50)', inicio: '07:00:00', fin: '07:50:00' },
+            { fime: 'M2', label: 'M2 (07:50 - 08:40)', inicio: '07:50:00', fin: '08:40:00' },
+            { fime: 'M3', label: 'M3 (08:40 - 09:30)', inicio: '08:40:00', fin: '09:30:00' },
+            { fime: 'M4', label: 'M4 (09:30 - 10:20)', inicio: '09:30:00', fin: '10:20:00' },
+            { fime: 'M5', label: 'M5 (10:20 - 11:10)', inicio: '10:20:00', fin: '11:10:00' },
+            { fime: 'M6', label: 'M6 (11:10 - 12:00)', inicio: '11:10:00', fin: '12:00:00' },
+            { fime: 'V1', label: 'V1 (12:00 - 12:50)', inicio: '12:00:00', fin: '12:50:00' },
+            { fime: 'V2', label: 'V2 (12:50 - 13:40)', inicio: '12:50:00', fin: '13:40:00' },
+            { fime: 'V3', label: 'V3 (13:40 - 14:30)', inicio: '13:40:00', fin: '14:30:00' },
+            { fime: 'V4', label: 'V4 (14:30 - 15:20)', inicio: '14:30:00', fin: '15:20:00' },
+            { fime: 'V5', label: 'V5 (15:20 - 16:10)', inicio: '15:20:00', fin: '16:10:00' },
+            { fime: 'V6', label: 'V6 (16:10 - 17:00)', inicio: '16:10:00', fin: '17:00:00' },
+            { fime: 'N1', label: 'N1 (17:00 - 17:45)', inicio: '17:00:00', fin: '17:45:00' },
+            { fime: 'N2', label: 'N2 (17:45 - 18:30)', inicio: '17:45:00', fin: '18:30:00' },
+            { fime: 'N3', label: 'N3 (18:30 - 19:15)', inicio: '18:30:00', fin: '19:15:00' },
+            { fime: 'N4', label: 'N4 (19:15 - 20:00)', inicio: '19:15:00', fin: '20:00:00' },
+            { fime: 'N5', label: 'N5 (20:00 - 20:45)', inicio: '20:00:00', fin: '20:45:00' },
+            { fime: 'N6', label: 'N6 (20:45 - 21:30)', inicio: '20:45:00', fin: '21:30:00' }
+        ];
+
+        // ESTADO GLOBAL
+        let semestres = [];
+        let semestreActivoId = localStorage.getItem('semestre_activo_id') || null;
+        let materias = [];
+        let actividades = [];
+        let proyectos = [];
+        let todasLasSubtareas = [];
+        let subtareasProyectoActual = [];
+        let horarioClases = [];
+        let fechaActualCalendario = new Date(2026, 9, 1); // Octubre 2026
+        let fechaActualCalendarioProj = new Date(2026, 9, 1);
+        let proyectoSeleccionado = null;
+
+        // INICIALIZACIÓN
+        window.addEventListener('DOMContentLoaded', async () => {
+            renderCalendario();
+            llenarOpcionesHorasFime();
+            await cargarSemestres();
+            await recargarTodo();
+            comprobarNotificacionesHoy();
+
+            // Chequeo periódico cada 30 minutos mientras la app esté abierta
+            setInterval(comprobarNotificacionesHoy, 30 * 60 * 1000);
+        });
+
+        // 1. CARGA DE DATOS
+        async function cargarSemestres() {
+            const { data } = await db.from('semestres').select('*').order('created_at', { ascending: true });
+            semestres = data || [];
+            
+            const selectDesk = document.getElementById('semestreSelectDesktop');
+            const selectMob = document.getElementById('semestreSelectMobile');
+            selectDesk.innerHTML = '';
+            selectMob.innerHTML = '';
+            
+            if (semestres.length > 0) {
+                if (!semestreActivoId || !semestres.some(s => s.id === semestreActivoId)) {
+                    semestreActivoId = semestres[0].id;
+                    localStorage.setItem('semestre_activo_id', semestreActivoId);
+                }
+                semestres.forEach(s => {
+                    const opt1 = document.createElement('option');
+                    opt1.value = s.id;
+                    opt1.textContent = s.nombre;
+                    opt1.selected = s.id === semestreActivoId;
+                    selectDesk.appendChild(opt1);
+
+                    const opt2 = document.createElement('option');
+                    opt2.value = s.id;
+                    opt2.textContent = s.nombre;
+                    opt2.selected = s.id === semestreActivoId;
+                    selectMob.appendChild(opt2);
+                });
+            }
+        }
+
+        async function recargarTodo() {
+            if (!semestreActivoId) return;
+
+            const resMat = await db.from('materias').select('*').eq('semestre_id', semestreActivoId);
+            materias = resMat.data || [];
+
+            const resAct = await db.from('actividades').select('*').eq('semestre_id', semestreActivoId).order('fecha_entrega', { ascending: true });
+            actividades = resAct.data || [];
+
+            const resProj = await db.from('proyectos').select('*').eq('semestre_id', semestreActivoId);
+            proyectos = resProj.data || [];
+
+            const projIds = proyectos.map(p => p.id);
+            if (projIds.length > 0) {
+                const resSubs = await db.from('proyecto_tareas').select('*').in('proyecto_id', projIds);
+                todasLasSubtareas = resSubs.data || [];
+            } else {
+                todasLasSubtareas = [];
+            }
+
+            const resHorario = await db.from('horario').select('*').eq('semestre_id', semestreActivoId);
+            horarioClases = resHorario.data || [];
+
+            renderCalendario();
+            renderTabla();
+            renderPonderaciones();
+            renderProyectos();
+            renderMateriasSemestre();
+            renderHorarioFime();
+            llenarSelectsMaterias();
+
+            if (proyectoSeleccionado) {
+                const actual = proyectos.find(p => p.id === proyectoSeleccionado.id);
+                if (actual) verDetalleProyecto(actual, false);
+            }
+        }
+
+        function cambiarSemestre(id) {
+            semestreActivoId = id;
+            localStorage.setItem('semestre_activo_id', id);
+            document.getElementById('semestreSelectDesktop').value = id;
+            document.getElementById('semestreSelectMobile').value = id;
+            proyectoSeleccionado = null;
+            recargarTodo();
+        }
+
+        // 2. VISTAS Y NAVEGACIÓN
+        function switchTab(tabId) {
+            document.querySelectorAll('.view-container').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.bottom-nav-item').forEach(el => el.classList.remove('active'));
+
+            const targetSection = document.getElementById(tabId);
+            if (targetSection) targetSection.classList.add('active');
+
+            // Marcar botón activo en Sidebar
+            const btnSide = Array.from(document.querySelectorAll('.nav-btn')).find(b => b.getAttribute('onclick')?.includes(tabId));
+            if (btnSide) btnSide.classList.add('active');
+
+            // Marcar botón activo en Bottom Nav
+            const btnBottom = Array.from(document.querySelectorAll('.bottom-nav-item')).find(b => b.getAttribute('onclick')?.includes(tabId));
+            if (btnBottom) btnBottom.classList.add('active');
+
+            const titulos = {
+                'tab-cal': '📅 Calendario y Tareas',
+                'tab-horario': '🕒 Horario FIME',
+                'tab-calc': '📊 Ponderaciones',
+                'tab-proyectos': '🚀 Proyectos (PIAs)',
+                'tab-config': '📚 Semestres y Materias'
+            };
+            document.getElementById('pageTitle').textContent = titulos[tabId] || '';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function toggleSubView(view) {
+            document.getElementById('subViewCal').style.display = view === 'cal' ? 'block' : 'none';
+            document.getElementById('subViewTable').style.display = view === 'table' ? 'block' : 'none';
+            document.getElementById('subBtnCal').classList.toggle('active', view === 'cal');
+            document.getElementById('subBtnTable').classList.toggle('active', view === 'table');
+        }
+
+        // 3. CALENDARIO PRINCIPAL
+        function renderCalendario() {
+            const grid = document.getElementById('calendarioGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            const diasSemana = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            diasSemana.forEach(d => {
+                const head = document.createElement('div');
+                head.className = 'cal-day-name';
+                head.textContent = d;
+                grid.appendChild(head);
+            });
+
+            const year = fechaActualCalendario.getFullYear();
+            const month = fechaActualCalendario.getMonth();
+            const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            document.getElementById('calMonthYear').textContent = `${nombresMeses[month]} ${year}`;
+
+            const primerDiaMes = new Date(year, month, 1).getDay();
+            const totalDiasMes = new Date(year, month + 1, 0).getDate();
+            const totalDiasMesPrev = new Date(year, month, 0).getDate();
+
+            for (let i = primerDiaMes - 1; i >= 0; i--) {
+                const cell = document.createElement('div');
+                cell.className = 'cal-cell other-month';
+                cell.innerHTML = `<div class="cal-day-num">${totalDiasMesPrev - i}</div>`;
+                grid.appendChild(cell);
+            }
+
+            for (let d = 1; d <= totalDiasMes; d++) {
+                const cell = document.createElement('div');
+                cell.className = 'cal-cell';
+                const fechaISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                const esHoy = d === 25 && month === 9 && year === 2026;
+
+                // Drag & Drop
+                cell.addEventListener('dragover', (e) => {
+                    e.preventDefault();
+                    cell.classList.add('drag-over');
+                });
+                cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+                cell.addEventListener('drop', (e) => manejarDropTarea(e, fechaISO));
+
+                // Clic en la celda para agregar en celulares
+                cell.addEventListener('click', () => {
+                    if (window.innerWidth <= 768) abrirModalTareaConFecha(fechaISO);
+                });
+
+                const cellHeader = document.createElement('div');
+                cellHeader.className = 'cal-cell-header';
+                cellHeader.innerHTML = `
+                    <div class="cal-day-num ${esHoy ? 'today' : ''}">${d}</div>
+                    <button class="cal-add-btn" title="Añadir actividad" onclick="event.stopPropagation(); abrirModalTareaConFecha('${fechaISO}')">+</button>
+                `;
+                cell.appendChild(cellHeader);
+
+                // A. Actividades académicas regulares
+                const tareasDia = actividades.filter(a => a.fecha_entrega === fechaISO);
+                tareasDia.forEach(t => {
+                    const mat = materias.find(m => m.id === t.materia_id);
+                    const item = document.createElement('div');
+                    item.className = 'cal-item';
+                    item.setAttribute('draggable', 'true');
+
+                    item.addEventListener('dragstart', (e) => {
+                        item.classList.add('dragging');
+                        e.dataTransfer.setData('text/plain', JSON.stringify({ id: t.id, tipo: 'actividad' }));
+                    });
+                    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${t.titulo}</span>
+                            <span style="color: ${t.entregada ? '#10b981' : 'var(--text-muted)'}; font-size: 11px;">${t.entregada ? '☑' : '☐'}</span>
+                        </div>
+                        <div class="cal-badge" style="background-color: ${mat ? mat.color : '#444'}; color: #fff;">
+                            ${mat ? mat.nombre : 'General'}
+                        </div>
+                    `;
+                    item.onclick = (e) => {
+                        e.stopPropagation();
+                        abrirModalNotionTarea(t);
+                    };
+                    cell.appendChild(item);
+                });
+
+                // B. Subtareas de Proyectos / PIAs programadas en este día
+                const subsDia = todasLasSubtareas.filter(s => s.fecha_entrega === fechaISO);
+                subsDia.forEach(st => {
+                    const proj = proyectos.find(p => p.id === st.proyecto_id);
+                    const item = document.createElement('div');
+                    item.className = 'cal-item cal-item-project';
+                    item.setAttribute('draggable', 'true');
+
+                    item.addEventListener('dragstart', (e) => {
+                        item.classList.add('dragging');
+                        e.dataTransfer.setData('text/plain', JSON.stringify({ id: st.id, tipo: 'subtarea' }));
+                    });
+                    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; ${st.completada ? 'text-decoration: line-through; opacity: 0.6;' : ''}">🚀 ${st.titulo}</span>
+                            <span style="font-size: 10px;">${st.completada ? '☑' : '☐'}</span>
+                        </div>
+                    `;
+                    item.onclick = (e) => {
+                        e.stopPropagation();
+                        switchTab('tab-proyectos');
+                        if (proj) verDetalleProyecto(proj, true);
+                    };
+                    cell.appendChild(item);
+                });
+
+                grid.appendChild(cell);
+            }
+        }
+
+        async function manejarDropTarea(e, nuevaFechaISO) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+
+            const payloadStr = e.dataTransfer.getData('text/plain');
+            if (!payloadStr) return;
+
+            const { id, tipo } = JSON.parse(payloadStr);
+
+            if (tipo === 'actividad') {
+                const act = actividades.find(a => a.id === id);
+                if (act) act.fecha_entrega = nuevaFechaISO;
+                renderCalendario();
+                await db.from('actividades').update({ fecha_entrega: nuevaFechaISO }).eq('id', id);
+            } else if (tipo === 'subtarea') {
+                const sub = todasLasSubtareas.find(s => s.id === id);
+                if (sub) sub.fecha_entrega = nuevaFechaISO;
+                renderCalendario();
+                await db.from('proyecto_tareas').update({ fecha_entrega: nuevaFechaISO }).eq('id', id);
+            }
+
+            recargarTodo();
+        }
+
+        function cambiarMes(delta) {
+            fechaActualCalendario.setMonth(fechaActualCalendario.getMonth() + delta);
+            renderCalendario();
+        }
+
+        function irHoy() {
+            fechaActualCalendario = new Date(2026, 9, 1);
+            renderCalendario();
+        }
+
+        // 4. MODAL ESTILO NOTION
+        function abrirModalNotionTarea(t) {
+            document.getElementById('notionEditId').value = t.id;
+            document.getElementById('notionEditTitulo').value = t.titulo;
+            document.getElementById('notionEditEstado').value = t.estado;
+            document.getElementById('notionEditEntregada').checked = t.entregada;
+            document.getElementById('notionEditFechaEntrega').value = t.fecha_entrega;
+            document.getElementById('notionEditFechaRecibida').value = t.fecha_recibida || '';
+            document.getElementById('notionEditTipo').value = t.tipo;
+            document.getElementById('notionEditPuntos').value = t.ponderacion || 0;
+
+            const sem = semestres.find(s => s.id === t.semestre_id);
+            document.getElementById('notionEditSemestre').textContent = sem ? sem.nombre : '5 Semestre';
+
+            const selMat = document.getElementById('notionEditMateria');
+            selMat.innerHTML = '';
+            materias.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.nombre;
+                opt.selected = m.id === t.materia_id;
+                selMat.appendChild(opt);
+            });
+
+            document.getElementById('modalNotionTarea').classList.add('active');
+        }
+
+        async function guardarEdicionTareaNotion() {
+            const id = document.getElementById('notionEditId').value;
+            const titulo = document.getElementById('notionEditTitulo').value.trim();
+            const estado = document.getElementById('notionEditEstado').value;
+            const materia_id = document.getElementById('notionEditMateria').value;
+            const entregada = document.getElementById('notionEditEntregada').checked;
+            const fecha_entrega = document.getElementById('notionEditFechaEntrega').value;
+            const fecha_recibida = document.getElementById('notionEditFechaRecibida').value || null;
+            const tipo = document.getElementById('notionEditTipo').value;
+            const ponderacion = document.getElementById('notionEditPuntos').value || 0;
+
+            if (!titulo || !fecha_entrega) return alert('El título y la fecha son obligatorios.');
+
+            await db.from('actividades').update({
+                titulo, estado, materia_id, entregada, fecha_entrega, fecha_recibida, tipo, ponderacion
+            }).eq('id', id);
+
+            cerrarModal('modalNotionTarea');
+            recargarTodo();
+        }
+
+        async function eliminarTareaDesdeModal() {
+            const id = document.getElementById('notionEditId').value;
+            if (!confirm('¿Eliminar esta actividad?')) return;
+            await db.from('actividades').delete().eq('id', id);
+            cerrarModal('modalNotionTarea');
+            recargarTodo();
+        }
+
+        // 5. TABLA DETALLADA
+        function renderTabla() {
+            const tbody = document.getElementById('tablaActividadesBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            actividades.forEach(a => {
+                const mat = materias.find(m => m.id === a.materia_id);
+                const tr = document.createElement('tr');
+                tr.style.cursor = 'pointer';
+                tr.innerHTML = `
+                    <td style="text-align: center;" onclick="event.stopPropagation()">
+                        <input type="checkbox" ${a.entregada ? 'checked' : ''} onchange="toggleEntregada('${a.id}', this.checked)">
+                    </td>
+                    <td style="font-weight: 600;">${a.titulo}</td>
+                    <td>
+                        <span class="cal-badge" style="background-color: ${mat ? mat.color : '#444'}; color: #fff;">
+                            ${mat ? mat.nombre : 'General'}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="pill-status ${a.estado === 'Terminada' ? 'done' : a.estado === 'en proceso' ? 'prog' : 'todo'}">
+                            ● ${a.estado}
+                        </span>
+                    </td>
+                    <td style="color: var(--text-secondary);">${a.fecha_recibida || '-'}</td>
+                    <td style="color: var(--text-secondary);">${a.fecha_entrega}</td>
+                    <td><span style="font-size: 11px; background: #262626; padding: 3px 6px; border-radius: 4px;">${a.tipo}</span></td>
+                    <td style="font-weight: 600;">${a.ponderacion || 0}%</td>
+                `;
+                tr.onclick = () => abrirModalNotionTarea(a);
+                tbody.appendChild(tr);
+            });
+        }
+
+        // 6. HORARIO FIME
+        function llenarOpcionesHorasFime() {
+            const select = document.getElementById('horarioHoraSelect');
+            if (!select) return;
+            select.innerHTML = '';
+            HORAS_FIME.forEach(h => {
+                const opt = document.createElement('option');
+                opt.value = h.fime;
+                opt.textContent = h.label;
+                select.appendChild(opt);
+            });
+        }
+
+        function renderHorarioFime() {
+            const tbody = document.getElementById('horarioFimeBody');
+            if (!tbody) return;
+            tbody.innerHTML = '';
+
+            const dias = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+
+            HORAS_FIME.forEach(hf => {
+                const tr = document.createElement('tr');
+                
+                const tdTime = document.createElement('td');
+                tdTime.className = 'horario-time-col';
+                tdTime.innerHTML = `<span class="fime-pill">${hf.fime}</span> ${hf.inicio.substring(0, 5)}`;
+                tr.appendChild(tdTime);
+
+                dias.forEach(d => {
+                    const td = document.createElement('td');
+                    const clase = horarioClases.find(c => c.dia === d && (c.hora_inicio === hf.inicio || c.aula?.includes(hf.fime)));
+                    
+                    if (clase) {
+                        const mat = materias.find(m => m.id === clase.materia_id);
+                        td.innerHTML = `
+                            <div class="clase-card" style="background-color: ${mat ? mat.color : '#334155'}; color: #fff;">
+                                <div style="font-weight: 700; padding-right: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${mat ? mat.nombre : 'Clase'}</div>
+                                <div style="font-size: 9px; opacity: 0.85; margin-top: 2px;">📍 ${clase.aula || 'FIME'}</div>
+                                <button class="del-clase-btn" title="Eliminar" onclick="eliminarClaseHorario('${clase.id}')">✕</button>
+                            </div>
+                        `;
+                    }
+                    tr.appendChild(td);
+                });
+
+                tbody.appendChild(tr);
+            });
+        }
+
+        function abrirModalHorario() {
+            const selMat = document.getElementById('horarioMateriaSelect');
+            selMat.innerHTML = '';
+            materias.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = m.nombre;
+                selMat.appendChild(opt);
+            });
+            document.getElementById('modalHorario').classList.add('active');
+        }
+
+        async function guardarHorarioClase() {
+            const materia_id = document.getElementById('horarioMateriaSelect').value;
+            const dia = document.getElementById('horarioDiaSelect').value;
+            const fimeKey = document.getElementById('horarioHoraSelect').value;
+            const aula = document.getElementById('horarioAulaInput').value.trim() || 'FIME';
+
+            const fimeObj = HORAS_FIME.find(h => h.fime === fimeKey);
+            if (!materia_id || !fimeObj) return alert('Completa los campos.');
+
+            await db.from('horario').insert([{
+                semestre_id: semestreActivoId,
+                materia_id,
+                dia,
+                hora_inicio: fimeObj.inicio,
+                hora_fin: fimeObj.fin,
+                aula: `${fimeObj.fime} - ${aula}`
+            }]);
+
+            cerrarModal('modalHorario');
+            recargarTodo();
+        }
+
+        async function eliminarClaseHorario(id) {
+            if (!confirm('¿Eliminar esta clase del horario?')) return;
+            await db.from('horario').delete().eq('id', id);
+            recargarTodo();
+        }
+
+        // 7. GESTIÓN DE MATERIAS
+        function renderMateriasSemestre() {
+            const container = document.getElementById('materiasListContainer');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (materias.length === 0) {
+                container.innerHTML = '<p style="color: var(--text-muted); font-size: 13px;">No hay materias registradas en este semestre.</p>';
+                return;
+            }
+
+            materias.forEach(m => {
+                const cantTareas = actividades.filter(a => a.materia_id === m.id).length;
+                const card = document.createElement('div');
+                card.className = 'materia-item-card';
+                card.innerHTML = `
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <span style="display: inline-block; width: 12px; height: 12px; border-radius: 3px; background: ${m.color}; flex-shrink: 0;"></span>
+                        <div>
+                            <div style="font-weight: 600; font-size: 13.5px;">${m.nombre}</div>
+                            <div style="font-size: 11px; color: var(--text-secondary); margin-top: 2px;">${cantTareas} entrega(s)</div>
+                        </div>
+                    </div>
+                    <button class="btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="eliminarMateria('${m.id}')">Eliminar</button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        async function eliminarMateria(id) {
+            if (!confirm('¿Eliminar esta materia? Todas sus tareas asociadas se borrarán.')) return;
+            await db.from('materias').delete().eq('id', id);
+            recargarTodo();
+        }
+
+        // 8. PONDERACIONES
+        function renderPonderaciones() {
+            const grid = document.getElementById('calcGrid');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            materias.forEach(m => {
+                const tareasMat = actividades.filter(a => a.materia_id === m.id);
+                const totalPuntos = tareasMat.reduce((acc, t) => acc + Number(t.ponderacion || 0), 0);
+                const puntosGanados = tareasMat.filter(t => t.entregada).reduce((acc, t) => acc + Number(t.ponderacion || 0), 0);
+                const porcentaje = totalPuntos > 0 ? (puntosGanados / totalPuntos) * 100 : 0;
+
+                const card = document.createElement('div');
+                card.className = 'calc-card';
+                card.innerHTML = `
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span class="cal-badge" style="background: ${m.color}; color: #fff;">${m.nombre}</span>
+                        <span style="font-size: 12px; font-weight: 600; color: var(--text-secondary);">${puntosGanados} / ${totalPuntos} pts</span>
+                    </div>
+                    <div class="calc-bar">
+                        <div class="calc-progress" style="width: ${porcentaje}%;"></div>
+                    </div>
+                    <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 4px;">
+                        ${puntosGanados >= 70 ? '🎉 Aprobada' : `Faltan ${Math.max(0, 70 - puntosGanados)} pts para 70.`}
+                    </p>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        // 9. PROYECTOS Y CALENDARIO DEDICADO
+        function renderProyectos() {
+            const list = document.getElementById('proyectosCards');
+            if (!list) return;
+            list.innerHTML = '';
+
+            proyectos.forEach(p => {
+                const mat = materias.find(m => m.id === p.materia_id);
+                const div = document.createElement('div');
+                div.className = `proj-card ${proyectoSeleccionado?.id === p.id ? 'selected' : ''}`;
+                div.innerHTML = `
+                    <div style="font-weight: 700; font-size: 13.5px;">${p.titulo}</div>
+                    <div style="font-size: 11px; color: var(--text-secondary); margin-top: 3px;">Entrega: ${p.fecha_entrega || 'Sin fecha'}</div>
+                    <span class="cal-badge" style="background: ${mat ? mat.color : '#333'}; color: #fff; margin-top: 4px;">${mat ? mat.nombre : ''}</span>
+                `;
+                div.onclick = () => verDetalleProyecto(p, true);
+                list.appendChild(div);
+            });
+
+            if (proyectos.length > 0 && !proyectoSeleccionado) {
+                verDetalleProyecto(proyectos[0], true);
+            }
+        }
+
+        async function verDetalleProyecto(p, saltarAMesRelevante = false) {
+            proyectoSeleccionado = p;
+
+            const { data } = await db.from('proyecto_tareas').select('*').eq('proyecto_id', p.id).order('fecha_entrega', { ascending: true });
+            subtareasProyectoActual = data || [];
+
+            if (saltarAMesRelevante) {
+                if (subtareasProyectoActual.length > 0 && subtareasProyectoActual[0].fecha_entrega) {
+                    const pDate = subtareasProyectoActual[0].fecha_entrega.split('-');
+                    fechaActualCalendarioProj = new Date(parseInt(pDate[0]), parseInt(pDate[1]) - 1, 1);
+                } else if (p.fecha_entrega) {
+                    const pDate = p.fecha_entrega.split('-');
+                    fechaActualCalendarioProj = new Date(parseInt(pDate[0]), parseInt(pDate[1]) - 1, 1);
+                } else {
+                    fechaActualCalendarioProj = new Date(2026, 9, 1);
+                }
+            }
+
+            document.querySelectorAll('.proj-card').forEach(c => c.classList.remove('selected'));
+            const activeCard = Array.from(document.querySelectorAll('.proj-card')).find(c => c.textContent.includes(p.titulo));
+            if (activeCard) activeCard.classList.add('selected');
+
+            const detail = document.getElementById('projDetailArea');
+            const mat = materias.find(m => m.id === p.materia_id);
+
+            const mesesMap = {};
+            subtareasProyectoActual.forEach(st => {
+                if (st.fecha_entrega) {
+                    const ym = st.fecha_entrega.substring(0, 7);
+                    mesesMap[ym] = (mesesMap[ym] || 0) + 1;
+                }
+            });
+            if (p.fecha_entrega) {
+                const ymP = p.fecha_entrega.substring(0, 7);
+                mesesMap[ymP] = mesesMap[ymP] || 0;
+            }
+
+            const chipsHtml = Object.keys(mesesMap).sort().map(ym => {
+                const [y, m] = ym.split('-');
+                const nomMes = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"][parseInt(m) - 1];
+                const count = mesesMap[ym];
+                const label = `${nomMes} ${y} ${count > 0 ? `(${count})` : '(🏁)'}`;
+                const isActive = fechaActualCalendarioProj.getFullYear() === parseInt(y) && fechaActualCalendarioProj.getMonth() === parseInt(m) - 1;
+                return `<button class="month-chip ${isActive ? 'active' : ''}" onclick="saltarAMesEspecificoProj(${y}, ${parseInt(m) - 1})">${label}</button>`;
+            }).join('');
+
+            detail.innerHTML = `
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;">
+                    <div>
+                        <h2 style="font-weight: 700; font-size: 18px;">${p.titulo}</h2>
+                        <span class="cal-badge" style="background: ${mat ? mat.color : '#333'}; color: #fff; margin-top: 4px;">${mat ? mat.nombre : ''}</span>
+                        <p style="font-size: 11.5px; color: var(--text-secondary); margin-top: 4px;">Entrega final: <strong>${p.fecha_entrega || 'No definida'}</strong></p>
+                    </div>
+                    <button class="btn-danger" style="padding: 4px 8px; font-size: 11px;" onclick="eliminarProyecto('${p.id}')">Eliminar</button>
+                </div>
+
+                <div>
+                    <label style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 4px;">
+                        💡 Bloc de Notas e Ideas:
+                    </label>
+                    <textarea class="proj-textarea" onblur="guardarNotasProyecto('${p.id}', this.value)">${p.ideas || ''}</textarea>
+                </div>
+
+                <div>
+                    <label style="font-size: 11.5px; font-weight: 600; color: var(--text-secondary); display: block; margin-bottom: 6px;">
+                        📋 Fases y Subtareas del Proyecto:
+                    </label>
+                    <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+                        <input type="text" id="nuevaSubtareaTitulo" class="input-dark" style="flex: 1; min-width: 140px;" placeholder="Nueva fase...">
+                        <input type="date" id="nuevaSubtareaFecha" class="input-dark" style="width: 140px;">
+                        <button class="btn-primary" onclick="agregarSubtareaProyecto()">+ Agregar</button>
+                    </div>
+                    <div id="subtareasListContainer">
+                        ${subtareasProyectoActual.length === 0 ? '<p style="font-size: 11.5px; color: var(--text-muted);">Sin subtareas creadas.</p>' : ''}
+                        ${subtareasProyectoActual.map(st => `
+                            <div style="display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; background: #191919; border: 1px solid var(--border-subtle); border-radius: 6px; margin-bottom: 4px; font-size: 12.5px;">
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <input type="checkbox" ${st.completada ? 'checked' : ''} onchange="toggleSubtarea('${st.id}', this.checked)">
+                                    <span style="${st.completada ? 'text-decoration: line-through; color: var(--text-muted);' : ''}">${st.titulo}</span>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 8px;">
+                                    <button class="cal-nav-btn" style="padding: 2px 6px; font-size: 10px;" onclick="saltarAFechaProj('${st.fecha_entrega}')">
+                                        📅 ${st.fecha_entrega || 'Sin fecha'}
+                                    </button>
+                                    <button style="background: none; border: none; color: #ef4444; cursor: pointer; font-size: 13px;" onclick="eliminarSubtarea('${st.id}')">✕</button>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div style="border-top: 1px solid var(--border-subtle); padding-top: 16px;">
+                    <div class="cal-header">
+                        <div class="cal-month-title" id="calProjMonthYear" style="font-size: 14px;">Cronograma</div>
+                        <div style="display: flex; gap: 5px;">
+                            <button class="cal-nav-btn" onclick="cambiarMesProj(-1)">‹</button>
+                            <button class="cal-nav-btn" onclick="irHoyProj()">Hoy</button>
+                            <button class="cal-nav-btn" onclick="cambiarMesProj(1)">›</button>
+                        </div>
+                    </div>
+
+                    ${chipsHtml ? `
+                        <div style="display: flex; align-items: center; gap: 5px; margin-bottom: 10px; flex-wrap: wrap;">
+                            <span style="font-size: 10.5px; color: var(--text-secondary);">Entregas en:</span>
+                            ${chipsHtml}
+                        </div>
+                    ` : ''}
+
+                    <div class="cal-grid" id="calGridProyecto"></div>
+                </div>
+            `;
+
+            renderCalendarioProyecto();
+        }
+
+        function renderCalendarioProyecto() {
+            const grid = document.getElementById('calGridProyecto');
+            if (!grid || !proyectoSeleccionado) return;
+            grid.innerHTML = '';
+
+            const diasSemana = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            diasSemana.forEach(d => {
+                const head = document.createElement('div');
+                head.className = 'cal-day-name';
+                head.textContent = d;
+                grid.appendChild(head);
+            });
+
+            const year = fechaActualCalendarioProj.getFullYear();
+            const month = fechaActualCalendarioProj.getMonth();
+            const nombresMeses = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"];
+            document.getElementById('calProjMonthYear').textContent = `📅 ${nombresMeses[month]} ${year}`;
+
+            const primerDiaMes = new Date(year, month, 1).getDay();
+            const totalDiasMes = new Date(year, month + 1, 0).getDate();
+            const totalDiasMesPrev = new Date(year, month, 0).getDate();
+
+            for (let i = primerDiaMes - 1; i >= 0; i--) {
+                const cell = document.createElement('div');
+                cell.className = 'cal-cell other-month';
+                cell.innerHTML = `<div class="cal-day-num">${totalDiasMesPrev - i}</div>`;
+                grid.appendChild(cell);
+            }
+
+            for (let d = 1; d <= totalDiasMes; d++) {
+                const cell = document.createElement('div');
+                cell.className = 'cal-cell';
+                const fechaISO = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                
+                cell.addEventListener('dragover', (e) => { e.preventDefault(); cell.classList.add('drag-over'); });
+                cell.addEventListener('dragleave', () => cell.classList.remove('drag-over'));
+                cell.addEventListener('drop', async (e) => {
+                    e.preventDefault();
+                    cell.classList.remove('drag-over');
+                    const payloadStr = e.dataTransfer.getData('text/plain');
+                    if (!payloadStr) return;
+                    const { id, tipo } = JSON.parse(payloadStr);
+                    if (tipo === 'subtarea') {
+                        await db.from('proyecto_tareas').update({ fecha_entrega: fechaISO }).eq('id', id);
+                        await recargarTodo();
+                    }
+                });
+
+                cell.innerHTML = `<div class="cal-day-num">${d}</div>`;
+
+                if (proyectoSeleccionado.fecha_entrega === fechaISO) {
+                    const item = document.createElement('div');
+                    item.className = 'cal-item';
+                    item.style.borderColor = '#ef4444';
+                    item.style.backgroundColor = '#2d1515';
+                    item.innerHTML = `<div style="color: #ef4444; font-weight: 700; font-size: 10px;">🏁 Entrega Final</div>`;
+                    cell.appendChild(item);
+                }
+
+                const subsDia = subtareasProyectoActual.filter(s => s.fecha_entrega === fechaISO);
+                subsDia.forEach(s => {
+                    const item = document.createElement('div');
+                    item.className = 'cal-item cal-item-project';
+                    item.setAttribute('draggable', 'true');
+
+                    item.addEventListener('dragstart', (e) => {
+                        item.classList.add('dragging');
+                        e.dataTransfer.setData('text/plain', JSON.stringify({ id: s.id, tipo: 'subtarea' }));
+                    });
+                    item.addEventListener('dragend', () => item.classList.remove('dragging'));
+
+                    item.innerHTML = `
+                        <div style="display: flex; align-items: center; justify-content: space-between;">
+                            <span style="font-size: 10.5px; font-weight: 500; ${s.completada ? 'text-decoration: line-through; opacity: 0.6;' : ''}">
+                                ${s.titulo}
+                            </span>
+                            <span style="font-size: 10px;">${s.completada ? '☑' : '☐'}</span>
+                        </div>
+                    `;
+                    item.onclick = async () => {
+                        await toggleSubtarea(s.id, !s.completada);
+                    };
+                    cell.appendChild(item);
+                });
+
+                grid.appendChild(cell);
+            }
+        }
+
+        function cambiarMesProj(delta) {
+            fechaActualCalendarioProj.setMonth(fechaActualCalendarioProj.getMonth() + delta);
+            renderCalendarioProyecto();
+        }
+
+        function irHoyProj() {
+            fechaActualCalendarioProj = new Date(2026, 9, 1);
+            renderCalendarioProyecto();
+        }
+
+        function saltarAMesEspecificoProj(year, month) {
+            fechaActualCalendarioProj = new Date(year, month, 1);
+            if (proyectoSeleccionado) verDetalleProyecto(proyectoSeleccionado, false);
+        }
+
+        function saltarAFechaProj(fechaISO) {
+            if (!fechaISO) return;
+            const partes = fechaISO.split('-');
+            if (partes.length === 3) {
+                fechaActualCalendarioProj = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, 1);
+                if (proyectoSeleccionado) verDetalleProyecto(proyectoSeleccionado, false);
+            }
+        }
+
+        async function agregarSubtareaProyecto() {
+            const titulo = document.getElementById('nuevaSubtareaTitulo').value.trim();
+            const fecha_entrega = document.getElementById('nuevaSubtareaFecha').value || null;
+            if (!titulo) return alert('Escribe el título de la subtarea.');
+
+            if (fecha_entrega) {
+                const partes = fecha_entrega.split('-');
+                if (partes.length === 3) {
+                    fechaActualCalendarioProj = new Date(parseInt(partes[0]), parseInt(partes[1]) - 1, 1);
+                }
+            }
+
+            await db.from('proyecto_tareas').insert([{
+                proyecto_id: proyectoSeleccionado.id,
+                titulo,
+                fecha_entrega,
+                completada: false
+            }]);
+
+            await recargarTodo();
+        }
+
+        async function toggleSubtarea(id, completada) {
+            await db.from('proyecto_tareas').update({ completada }).eq('id', id);
+            await recargarTodo();
+        }
+
+        async function eliminarSubtarea(id) {
+            await db.from('proyecto_tareas').delete().eq('id', id);
+            await recargarTodo();
+        }
+
+        async function guardarNotasProyecto(id, texto) {
+            await db.from('proyectos').update({ ideas: texto }).eq('id', id);
+        }
+
+        async function eliminarProyecto(id) {
+            if (!confirm('¿Eliminar este proyecto?')) return;
+            await db.from('proyectos').delete().eq('id', id);
+            proyectoSeleccionado = null;
+            recargarTodo();
+        }
+
+        // 10. CRUD BASE
+        async function toggleEntregada(id, entregada) {
+            await db.from('actividades').update({ entregada, estado: entregada ? 'Terminada' : 'no hecha' }).eq('id', id);
+            recargarTodo();
+        }
+
+        async function crearSemestre() {
+            const nombre = document.getElementById('nuevoSemestreNombre').value.trim();
+            if (!nombre) return;
+            const { data } = await db.from('semestres').insert([{ nombre, activo: false }]).select();
+            document.getElementById('nuevoSemestreNombre').value = '';
+            await cargarSemestres();
+            if (data && data[0]) cambiarSemestre(data[0].id);
+        }
+
+        async function crearMateria() {
+            const nombre = document.getElementById('nuevaMateriaNombre').value.trim();
+            const color = document.getElementById('nuevaMateriaColor').value;
+            if (!nombre || !semestreActivoId) return;
+
+            await db.from('materias').insert([{ semestre_id: semestreActivoId, nombre, color }]);
+            document.getElementById('nuevaMateriaNombre').value = '';
+            recargarTodo();
+        }
+
+        function abrirModalTareaConFecha(fechaISO) {
+            abrirModalTarea();
+            document.getElementById('tareaFecha').value = fechaISO;
+        }
+
+        async function guardarTarea() {
+            const titulo = document.getElementById('tareaTitulo').value.trim();
+            const materia_id = document.getElementById('tareaMateria').value;
+            const fecha_entrega = document.getElementById('tareaFecha').value;
+            const fecha_recibida = document.getElementById('tareaFechaRecibida').value || null;
+            const tipo = document.getElementById('tareaTipo').value;
+            const ponderacion = document.getElementById('tareaPuntos').value || 0;
+
+            if (!titulo || !fecha_entrega || !materia_id) return alert('Completa los campos obligatorios');
+
+            await db.from('actividades').insert([{
+                semestre_id: semestreActivoId,
+                materia_id,
+                titulo,
+                fecha_entrega,
+                fecha_recibida,
+                tipo,
+                ponderacion,
+                estado: 'no hecha',
+                entregada: false
+            }]);
+
+            cerrarModal('modalTarea');
+            recargarTodo();
+        }
+
+        async function guardarProyecto() {
+            const titulo = document.getElementById('projTitulo').value.trim();
+            const materia_id = document.getElementById('projMateria').value;
+            const fecha_entrega = document.getElementById('projFecha').value;
+
+            if (!titulo || !materia_id) return alert('Ingresa título y materia');
+
+            await db.from('proyectos').insert([{
+                semestre_id: semestreActivoId,
+                materia_id,
+                titulo,
+                fecha_entrega,
+                ideas: ''
+            }]);
+
+            cerrarModal('modalProyecto');
+            recargarTodo();
+        }
+
+        // 11. SELECTS Y MODALES
+        function llenarSelectsMaterias() {
+            const selTarea = document.getElementById('tareaMateria');
+            const selProj = document.getElementById('projMateria');
+            if (!selTarea || !selProj) return;
+            selTarea.innerHTML = '';
+            selProj.innerHTML = '';
+
+            materias.forEach(m => {
+                const opt1 = document.createElement('option');
+                opt1.value = m.id;
+                opt1.textContent = m.nombre;
+                selTarea.appendChild(opt1);
+
+                const opt2 = document.createElement('option');
+                opt2.value = m.id;
+                opt2.textContent = m.nombre;
+                selProj.appendChild(opt2);
+            });
+        }
+
+        function abrirModalTarea() { document.getElementById('modalTarea').classList.add('active'); }
+        function abrirModalProyecto() { document.getElementById('modalProyecto').classList.add('active'); }
+        function cerrarModal(id) { document.getElementById(id).classList.remove('active'); }
+
+        // 12. SISTEMA DE NOTIFICACIONES ROBUSTO
+        function enviarNotificacionNativa(titulo, cuerpo) {
+            if (!("Notification" in window) || Notification.permission !== "granted") return;
+
+            try {
+                // Notificación nativa con vibración y tag anti-duplicados
+                new Notification(titulo, {
+                    body: cuerpo,
+                    icon: 'https://cdn-icons-png.flaticon.com/512/2997/2997295.png',
+                    vibrate: [200, 100, 200],
+                    tag: 'agenda-fime-reminder'
+                });
+            } catch (err) {
+                // Fallback para navegadores móviles con ServiceWorker
+                if (navigator.serviceWorker && navigator.serviceWorker.ready) {
+                    navigator.serviceWorker.ready.then(reg => {
+                        reg.showNotification(titulo, {
+                            body: cuerpo,
+                            icon: 'https://cdn-icons-png.flaticon.com/512/2997/2997295.png'
+                        });
+                    });
+                }
+            }
+        }
+
+        function solicitarNotificaciones() {
+            if (!("Notification" in window)) {
+                return alert("Este navegador no soporta notificaciones de sistema.");
+            }
+
+            Notification.requestPermission().then(perm => {
+                if (perm === "granted") {
+                    enviarNotificacionNativa("🔔 Notificaciones Activas", "Todo listo: Tu agenda te recordará tus entregas de la uni.");
+                    comprobarNotificacionesHoy();
+                } else if (perm === "denied") {
+                    alert("Las notificaciones están bloqueadas en los ajustes de tu navegador.");
+                }
+            });
+        }
+
+        function comprobarNotificacionesHoy() {
+            if (Notification.permission !== "granted") return;
+            
+            // Fecha local del dispositivo en formato YYYY-MM-DD
+            const ahora = new Date();
+            const hoyISO = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}-${String(ahora.getDate()).padStart(2, '0')}`;
+
+            // Tareas y subtareas que vencen hoy
+            const tareasHoy = actividades.filter(a => a.fecha_entrega === hoyISO && !a.entregada);
+            const subsHoy = todasLasSubtareas.filter(s => s.fecha_entrega === hoyISO && !s.completada);
+            const totalPendientes = tareasHoy.length + subsHoy.length;
+
+            if (totalPendientes > 0) {
+                const nombres = [...tareasHoy.map(t => t.titulo), ...subsHoy.map(s => `[PIA] ${s.titulo}`)].slice(0, 3).join(', ');
+                enviarNotificacionNativa(
+                    `⚠️ Tienes ${totalPendientes} entrega(s) para hoy`,
+                    `Pendientes: ${nombres}${totalPendientes > 3 ? '...' : ''}`
+                );
+            }
+        }
+    </script>
+</body>
+</html>
